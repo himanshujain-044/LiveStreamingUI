@@ -14,7 +14,7 @@ import {
   SAVE_CALL_ID,
 } from "./../../utils/apiEndpoints";
 import "./CallPage.scss";
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import MessageListReducer from "../../reducers/MessageListReducer";
 
 let peer = null;
@@ -22,6 +22,7 @@ const socket = io.connect(process.env.REACT_APP_BASE_URL);
 const initialState = [];
 const CallPage = () => {
   const navigate = useNavigate();
+  const videoRef = useRef();
   let { id } = useParams();
   const isAdmin = window.location.hash == "#init" ? true : false;
   const url = `${window.location.origin}${window.location.pathname}`;
@@ -61,79 +62,80 @@ const CallPage = () => {
         audio: true,
       })
       .then((stream) => {
-        setStreamObj(stream);
+        // setStreamObj(stream);
+
         peer = new Peer({
           initiator: isAdmin,
           trickle: false,
           stream: stream,
         });
-        if (!isAdmin) {
-          console.log("71");
-          getRecieverCode();
-        }
-        console.log("74", peer);
-        peer.on("signal", async (data) => {
-          if (isAdmin) {
-            let payload = {
-              id,
-              signalData: data,
-            };
-            await postRequest(`${BASE_URL}${SAVE_CALL_ID}`, payload);
-          } else {
-            socket.emit("code", { code: data, url }, (cbData) => {
-              console.log("code sent");
-            });
-          }
-        });
-        peer.on("connect", () => {
-          // wait for 'connect' event before using the data channel
-        });
-        peer.on("data", (data) => {
-          clearTimeout(alertTimeout);
-          messageListReducer({
-            type: "addMessage",
-            payload: {
-              user: "other",
-              msg: data.toString(),
-              time: Date.now(),
-            },
-          });
-          setMessageAlert({
-            alert: true,
-            isPopup: true,
-            payload: {
-              user: "other",
-              msg: data.toString(),
-            },
-          });
-          alertTimeout = setTimeout(() => {
-            setMessageAlert({
-              ...messageAlert,
-              isPopup: false,
-              payload: {},
-            });
-          }, 10000);
-        });
-        // peer.on("stream", (stream) => {
-        //   // got remote video stream, now let's show it in a video tag
-
-        //   let video = document.querySelector("video");
-        //   console.log("118", video);
-        //   if ("srcObject" in video) {
-        //     video.srcObject = stream;
+        // if (!isAdmin) {
+        //   console.log("71");
+        //   getRecieverCode();
+        // }
+        // console.log("74", peer);
+        // peer.on("signal", async (data) => {
+        //   if (isAdmin) {
+        //     let payload = {
+        //       id,
+        //       signalData: data,
+        //     };
+        //     await postRequest(`${BASE_URL}${SAVE_CALL_ID}`, payload);
         //   } else {
-        //     video.src = window.URL.createObjectURL(stream); // for older browsers
+        //     socket.emit("code", { code: data, url }, (cbData) => {
+        //       console.log("code sent");
+        //     });
         //   }
-        //   video.play();
         // });
-        peer
-          .on("stream")
-          .then((res) => {
-            console.log("132", res);
-          })
-          .catch((err) => {
-            console.log("133", err);
-          });
+        // peer.on("connect", () => {
+        //   // wait for 'connect' event before using the data channel
+        // });
+        // peer.on("data", (data) => {
+        //   clearTimeout(alertTimeout);
+        //   messageListReducer({
+        //     type: "addMessage",
+        //     payload: {
+        //       user: "other",
+        //       msg: data.toString(),
+        //       time: Date.now(),
+        //     },
+        //   });
+        //   setMessageAlert({
+        //     alert: true,
+        //     isPopup: true,
+        //     payload: {
+        //       user: "other",
+        //       msg: data.toString(),
+        //     },
+        //   });
+        //   alertTimeout = setTimeout(() => {
+        //     setMessageAlert({
+        //       ...messageAlert,
+        //       isPopup: false,
+        //       payload: {},
+        //     });
+        //   }, 10000);
+        // });
+        peer.on("stream", (stream) => {
+          // got remote video stream, now let's show it in a video tag
+
+          let video = document.querySelector("video");
+          console.log("118", video);
+          if ("srcObject" in video) {
+            video.srcObject = stream;
+          } else {
+            video.src = window.URL.createObjectURL(stream); // for older browsers
+          }
+          video.play();
+        });
+        // peer
+        //   .on("stream")
+        //   .then((res) => {
+        //     console.log("132", res);
+        //   })
+        //   .catch((err) => {
+        //     console.log("133", err);
+        //   });
       })
       .catch(() => {});
   };
@@ -190,7 +192,12 @@ const CallPage = () => {
   };
   return (
     <div className="callpage-container">
-      <video className="video-container" src="" controls autoPlay></video>
+      <video
+        className="video-container"
+        controls
+        ref={videoRef}
+        autoPlay
+      ></video>
       <CallPageHeader
       // isMessenger={isMessenger}
       // setIsMessenger={setIsMessenger}
